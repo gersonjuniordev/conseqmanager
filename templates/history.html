@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="card-title">Histórico de Documentos</h2>
+                {% if session.user_type == 'company' %}
+                    <p class="text-muted">Documentos da sua empresa</p>
+                {% else %}
+                    <p class="text-muted">Todos os documentos</p>
+                {% endif %}
+            </div>
+            <a href="{{ url_for('main.upload') }}" class="button button-primary">
+                <i class="bi bi-plus-lg"></i>
+                Novo Documento
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Nome do Arquivo</th>
+                        {% if session.user_type == 'admin' %}
+                        <th>Empresa</th>
+                        {% endif %}
+                        <th>Data de Criação</th>
+                        <th>Status</th>
+                        <th>Assinante</th>
+                        <th>Data da Assinatura</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in documents %}
+                    <tr>
+                        <td>{{ doc.original_filename }}</td>
+                        {% if session.user_type == 'admin' %}
+                        <td>{{ doc.company.name if doc.company else 'Admin' }}</td>
+                        {% endif %}
+                        <td>{{ doc.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>
+                            {% if doc.status == 'signed' %}
+                                <span class="badge badge-success">Assinado</span>
+                            {% else %}
+                                <span class="badge badge-warning">Pendente</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ doc.signer_name or '-' }}</td>
+                        <td>{{ doc.signed_at.strftime('%d/%m/%Y %H:%M') if doc.signed_at else '-' }}</td>
+                        <td>
+                            <div class="actions">
+                                <a href="{{ url_for('main.view_document', doc_id=doc.id) }}" 
+                                   class="button button-secondary button-sm" title="Visualizar"
+                                   target="_blank">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                
+                                <a href="{{ url_for('main.download_document', doc_id=doc.id) }}" 
+                                   class="button button-secondary button-sm" title="Baixar"
+                                   onclick="return handleDownload(event, this)">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                                
+                                {% if doc.status == 'signed' %}
+                                <a href="{{ url_for('main.verify_document', doc_id=doc.id) }}"
+                                   class="button button-info button-sm" title="Verificar">
+                                    <i class="bi bi-shield-check"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="{% if session.user_type == 'admin' %}7{% else %}6{% endif %}" class="text-center">
+                            Nenhum documento encontrado
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function handleDownload(event, link) {
+    event.preventDefault();
+    
+    try {
+        const response = await fetch(link.href);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        // Obter o nome do arquivo do header Content-Disposition
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let filename = 'document.pdf';
+        if (contentDisposition) {
+            const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
+            if (matches != null && matches[1]) {
+                filename = matches[1].replace(/['"]/g, '');
+            }
+        }
+        
+        // Criar blob e fazer download
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+    } catch (error) {
+        console.error('Erro ao baixar documento:', error);
+        alert('Erro ao baixar o documento. Por favor, tente novamente.');
+    }
+    
+    return false;
+}
+</script>
+{% endblock %} 

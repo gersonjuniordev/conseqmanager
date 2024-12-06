@@ -1,0 +1,99 @@
+/* Tema Escuro */
+[data-theme="dark"] {
+    /* Cores Base */
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+    --text-primary: #e0e0e0;
+    --text-secondary: #b0b0b0;
+    --border-color: #404040;
+    
+    /* Componentes */
+    --card-bg: #2d2d2d;
+    --input-bg: #333333;
+    --input-border: #404040;
+    --button-primary-bg: #2563eb;
+    --button-primary-text: #ffffff;
+    --button-secondary-bg: #374151;
+    --button-secondary-text: #e0e0e0;
+    
+    /* Status */
+    --success-color: #059669;
+    --warning-color: #d97706;
+    --error-color: #dc2626;
+    --info-color: #2563eb;
+    
+    /* Tabelas */
+    --table-header-bg: #333333;
+    --table-row-hover: #3d3d3d;
+    --table-border: #404040;
+    
+    /* Modal */
+    --modal-bg: #2d2d2d;
+    --modal-overlay: rgba(0, 0, 0, 0.75);
+}
+
+/* Aplicar cores do tema */
+[data-theme="dark"] body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .card {
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+    background-color: var(--input-bg);
+    border-color: var(--input-border);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .table {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .table thead th {
+    background-color: var(--table-header-bg);
+    border-color: var(--table-border);
+}
+
+[data-theme="dark"] .table td {
+    border-color: var(--table-border);
+}
+
+[data-theme="dark"] .table tbody tr:hover {
+    background-color: var(--table-row-hover);
+}
+
+[data-theme="dark"] .modal-content {
+    background-color: var(--modal-bg);
+}
+
+[data-theme="dark"] .button-primary {
+    background-color: var(--button-primary-bg);
+    color: var(--button-primary-text);
+}
+
+[data-theme="dark"] .button-secondary {
+    background-color: var(--button-secondary-bg);
+    color: var(--button-secondary-text);
+}
+
+[data-theme="dark"] .badge-success {
+    background-color: var(--success-color);
+}
+
+[data-theme="dark"] .badge-warning {
+    background-color: var(--warning-color);
+}
+
+[data-theme="dark"] .badge-error {
+    background-color: var(--error-color);
+}
+
+[data-theme="dark"] .badge-info {
+    background-color: var(--info-color);
+} 

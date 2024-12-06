@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="verification-container">
+    <h2>Verificação de Assinatura Digital</h2>
+    
+    <div class="document-info">
+        <h3>Informações do Documento</h3>
+        <p><strong>Nome do arquivo:</strong> {{ document.original_filename }}</p>
+        <p><strong>Data de criação:</strong> {{ document.created_at.strftime('%d/%m/%Y %H:%M:%S') }}</p>
+        <p><strong>Status:</strong> {{ document.status }}</p>
+    </div>
+    
+    {% if validation.valid %}
+        <div class="validation-success">
+            <h3>✓ Assinatura Válida</h3>
+            
+            <div class="signer-info">
+                <h4>Dados do Assinante</h4>
+                <p><strong>Nome:</strong> {{ validation.data.assinante.nome }}</p>
+                <p><strong>E-mail:</strong> {{ validation.data.assinante.email }}</p>
+                <p><strong>CPF:</strong> {{ validation.data.assinante.cpf }}</p>
+                <p><strong>Data/Hora:</strong> {{ validation.data.timestamp }}</p>
+                <p><strong>IP:</strong> {{ validation.data.ip }}</p>
+            </div>
+            
+            <div class="device-info">
+                <h4>Informações do Dispositivo</h4>
+                <p><strong>Navegador:</strong> {{ validation.data.dispositivo.browser }}</p>
+                <p><strong>Plataforma:</strong> {{ validation.data.dispositivo.platform }}</p>
+            </div>
+        </div>
+    {% else %}
+        <div class="validation-error">
+            <h3>✗ Assinatura Inválida</h3>
+            <p>{{ validation.reason }}</p>
+        </div>
+    {% endif %}
+    
+    <div class="actions">
+        <a href="{{ url_for('main.download_document', doc_id=document.id) }}" class="button">
+            Baixar Documento
+        </a>
+    </div>
+</div>
+{% endblock %} 

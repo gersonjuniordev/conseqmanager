@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/signature.css') }}">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="signature-container">
+    <h2>Assinar Documento</h2>
+    
+    <form id="signerForm">
+        <div class="form-group">
+            <label for="name">Nome Completo:</label>
+            <input type="text" id="name" name="name" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="email">E-mail:</label>
+            <input type="email" id="email" name="email" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="cpf">CPF:</label>
+            <input type="text" id="cpf" name="cpf" required 
+                   pattern="\d{11}" placeholder="00000000000">
+        </div>
+        
+        <div class="terms">
+            <input type="checkbox" id="terms" required>
+            <label for="terms">
+                Declaro que li e aceito os termos de uso e que esta assinatura 
+                tem validade jurídica conforme MP 2.200-2/2001 e Lei 14.063/2020
+            </label>
+        </div>
+    </form>
+    
+    <!-- Container do PDF -->
+    <div id="pdf-container">
+        <canvas id="pdf-viewer"></canvas>
+        <div id="signature-preview"></div>
+    </div>
+    
+    <!-- Container da assinatura -->
+    <div class="signature-pad-container">
+        <canvas id="signature-pad"></canvas>
+        <div class="signature-buttons">
+            <button id="clear" class="button">Limpar</button>
+            <button id="position" class="button">Posicionar</button>
+            <button id="save" class="button primary">Assinar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/1.5.3/signature_pad.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const documentId = window.location.pathname.split('/').pop();
+    const signaturePad = new SignaturePad(document.getElementById('signature-pad'));
+    const signaturePreview = document.getElementById('signature-preview');
+    const pdfContainer = document.getElementById('pdf-container');
+    const pdfViewer = document.getElementById('pdf-viewer');
+    let signaturePosition = { x: 0, y: 0 };
+
+    // Carregar PDF
+    async function loadPDF() {
+        const pdfUrl = `/view/${documentId}`;
+        
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        
+        try {
+            const loadingTask = pdfjsLib.getDocument(pdfUrl);
+            const pdf = await loadingTask.promise;
+            const page = await pdf.getPage(1);
+            
+            const viewport = page.getViewport({ scale: 1.5 });
+            pdfViewer.width = viewport.width;
+            pdfViewer.height = viewport.height;
+            
+            const context = pdfViewer.getContext('2d');
+            await page.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise;
+        } catch (error) {
+            console.error('Erro ao carregar PDF:', error);
+        }
+    }
+
+    function initDragAndDrop() {
+        const preview = signaturePreview;
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+
+        preview.addEventListener('mousedown', dragStart);
+        preview.addEventListener('touchstart', dragStart, { passive: false });
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('touchmove', drag, { passive: false });
+        document.addEventListener('mouseup', dragEnd);
+        document.addEventListener('touchend', dragEnd);
+
+        function dragStart(e) {
+            e.preventDefault();
+            if (e.type === 'touchstart') {
+                initialX = e.touches[0].clientX - preview.offsetLeft;
+                initialY = e.touches[0].clientY - preview.offsetTop;
+            } else {
+                initialX = e.clientX - preview.offsetLeft;
+                initialY = e.clientY - preview.offsetTop;
+            }
+            isDragging = true;
+        }
+
+        function drag(e) {
+            if (isDragging) {
+                e.preventDefault();
+                
+                if (e.type === 'touchmove') {
+                    currentX = e.touches[0].clientX - initialX;
+                    currentY = e.touches[0].clientY - initialY;
+                } else {
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+                }
+
+                const rect = pdfContainer.getBoundingClientRect();
+                currentX = Math.min(Math.max(0, currentX), rect.width - preview.offsetWidth);
+                currentY = Math.min(Math.max(0, currentY), rect.height - preview.offsetHeight);
+
+                preview.style.left = currentX + 'px';
+                preview.style.top = currentY + 'px';
+
+                signaturePosition.x = (currentX / rect.width) * 100;
+                signaturePosition.y = (currentY / rect.height) * 100;
+            }
+        }
+
+        function dragEnd() {
+            isDragging = false;
+        }
+    }
+
+    document.getElementById('clear').addEventListener('click', function() {
+        signaturePad.clear();
+    });
+
+    document.getElementById('position').addEventListener('click', function() {
+        if (signaturePad.isEmpty()) {
+            alert('Por favor, faça sua assinatura primeiro.');
+            return;
+        }
+
+        const signatureData = signaturePad.toDataURL();
+        signaturePreview.innerHTML = `<img src="${signatureData}" style="max-width: 200px;">`;
+        signaturePreview.style.display = 'block';
+        initDragAndDrop();
+    });
+
+    document.getElementById('save').addEventListener('click', async function() {
+        try {
+            if (signaturePad.isEmpty()) {
+                alert('Por favor, faça sua assinatura primeiro.');
+                return;
+            }
+
+            const form = document.getElementById('signerForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const formData = new FormData(form);
+            const signatureData = {
+                signature: signaturePad.toDataURL(),
+                position_x: signaturePosition.x || 0,
+                position_y: signaturePosition.y || 0,
+                name: formData.get('name'),
+                email: formData.get('email'),
+                cpf: formData.get('cpf')
+            };
+
+            const response = await fetch(`/sign/${documentId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(signatureData)
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao assinar documento');
+            }
+            
+            alert('Documento assinado com sucesso!');
+            window.location.href = `/verify/${documentId}`;
+            
+        } catch (error) {
+            console.error('Erro:', error);
+            alert(error.message || 'Erro ao assinar o documento');
+        }
+    });
+
+    // Inicializar
+    loadPDF();
+});
+</script>
+{% endblock %}

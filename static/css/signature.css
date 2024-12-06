@@ -1,0 +1,75 @@
+.signature-container {
+    max-width: 100%;
+    padding: 20px;
+}
+
+#pdf-container {
+    position: relative;
+    width: 100%;
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    background: white;
+}
+
+#pdf-viewer {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+#signature-preview {
+    position: absolute;
+    display: none;
+    cursor: move;
+    z-index: 1000;
+    background: transparent;
+    touch-action: none;
+}
+
+#signature-preview img {
+    max-width: 200px;
+    height: auto;
+    pointer-events: none;
+    user-select: none;
+}
+
+.signature-pad-container {
+    margin-top: 20px;
+    border: 1px solid #ddd;
+    padding: 10px;
+}
+
+#signature-pad {
+    width: 100%;
+    height: 200px;
+    border: 1px solid #ccc;
+}
+
+.signature-buttons {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+}
+
+/* Ajustes para tema escuro */
+[data-theme="dark"] .signature-pad {
+    background-color: white; /* Manter branco para assinatura */
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .pdf-preview {
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .modal-content {
+    background-color: var(--modal-bg);
+}
+
+[data-theme="dark"] .modal-header {
+    border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .modal-footer {
+    border-top-color: var(--border-color);
+}

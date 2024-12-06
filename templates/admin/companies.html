@@ -1,0 +1,356 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Empresas - Admin{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div class="content-title">
+        <i class="bi bi-building"></i>
+        <div>
+            <h1>Empresas</h1>
+            <p class="text-muted">Gerencie as empresas cadastradas no sistema</p>
+        </div>
+    </div>
+    <a href="{{ url_for('admin.new_company') }}" class="button button-primary">
+        <i class="bi bi-plus-lg"></i>
+        Nova Empresa
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="toolbar">
+            <div class="search-box">
+                <i class="bi bi-search"></i>
+                <input type="text" id="searchInput" class="form-control" placeholder="Buscar empresas...">
+            </div>
+            <div class="filter-buttons">
+                <button class="button button-secondary active" data-filter="all">
+                    <i class="bi bi-grid"></i>
+                    Todas
+                </button>
+                <button class="button button-secondary" data-filter="active">
+                    <i class="bi bi-check-circle"></i>
+                    Ativas
+                </button>
+                <button class="button button-secondary" data-filter="inactive">
+                    <i class="bi bi-x-circle"></i>
+                    Inativas
+                </button>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Empresa</th>
+                        <th>CNPJ</th>
+                        <th>Criada em</th>
+                        <th>Usuários</th>
+                        <th>Status</th>
+                        <th class="text-center">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for company in companies %}
+                    <tr class="company-row" data-status="{{ 'active' if company.active else 'inactive' }}">
+                        <td>
+                            <div class="company-info">
+                                <div class="company-icon">{{ company.name[:2].upper() }}</div>
+                                <div class="company-details">
+                                    <strong>{{ company.name }}</strong>
+                                    <small class="text-muted">{{ company.database_name }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ company.cnpj }}</td>
+                        <td>{{ company.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>
+                            <span class="badge badge-info">
+                                {{ company.users|length }} usuários
+                            </span>
+                        </td>
+                        <td>
+                            {% if company.active %}
+                            <span class="badge badge-success">
+                                <i class="bi bi-check-circle"></i>
+                                Ativa
+                            </span>
+                            {% else %}
+                            <span class="badge badge-danger">
+                                <i class="bi bi-x-circle"></i>
+                                Inativa
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="actions">
+                                <a href="{{ url_for('admin.list_company_users', company_id=company.id) }}" 
+                                   class="button button-info button-sm" title="Gerenciar Usuários">
+                                    <i class="bi bi-people"></i>
+                                </a>
+                                <a href="{{ url_for('admin.edit_company', id=company.id) }}" 
+                                   class="button button-warning button-sm" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="button button-danger button-sm" 
+                                        onclick="confirmDelete('{{ company.id }}', '{{ company.name }}')" 
+                                        title="{{ 'Desativar' if company.active else 'Ativar' }}">
+                                    <i class="bi bi-{{ 'power' if company.active else 'check-lg' }}"></i>
+                                </button>
+                            </div>
+
+                            <form id="delete-form-{{ company.id }}" 
+                                  action="{{ url_for('admin.delete_company', id=company.id) }}" 
+                                  method="POST" style="display: none;">
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <div class="empty-state">
+                                <i class="bi bi-building"></i>
+                                <p>Nenhuma empresa cadastrada</p>
+                                <a href="{{ url_for('admin.new_company') }}" class="button button-primary">
+                                    <i class="bi bi-plus-lg"></i>
+                                    Adicionar Empresa
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.content-header {
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.content-title {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.content-title i {
+    font-size: 2rem;
+    color: var(--primary-color);
+    background: var(--primary-light);
+    padding: 1rem;
+    border-radius: 1rem;
+}
+
+.content-title h1 {
+    margin: 0 0 0.25rem;
+    font-size: 1.75rem;
+    font-weight: 600;
+}
+
+.toolbar {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.search-box {
+    flex: 1;
+    min-width: 250px;
+    position: relative;
+}
+
+.search-box i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-light);
+}
+
+.search-box input {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 2.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.filter-buttons .button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-buttons .button.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+.company-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.company-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--primary-light);
+    color: var(--primary-color);
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+}
+
+.company-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.company-details small {
+    font-size: 0.75rem;
+}
+
+.actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    color: var(--text-light);
+    margin-bottom: 1rem;
+}
+
+.empty-state p {
+    color: var(--text-light);
+    margin-bottom: 1rem;
+}
+
+.badge {
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.badge-success {
+    background: var(--success-light);
+    color: var(--success-color);
+}
+
+.badge-danger {
+    background: var(--danger-light);
+    color: var(--danger-color);
+}
+
+.badge-info {
+    background: var(--info-light);
+    color: var(--info-color);
+}
+
+@media (max-width: 768px) {
+    .content-header {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+
+    .content-title {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .toolbar {
+        flex-direction: column;
+    }
+
+    .search-box {
+        width: 100%;
+    }
+
+    .filter-buttons {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .actions {
+        flex-wrap: wrap;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const filterButtons = document.querySelectorAll('.filter-buttons .button');
+    const rows = document.querySelectorAll('.company-row');
+
+    // Busca
+    searchInput.addEventListener('input', filterCompanies);
+
+    // Filtros
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            filterCompanies();
+        });
+    });
+
+    function filterCompanies() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const activeFilter = document.querySelector('.filter-buttons .button.active').dataset.filter;
+
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            const status = row.dataset.status;
+            const matchesSearch = text.includes(searchTerm);
+            const matchesFilter = activeFilter === 'all' || status === activeFilter;
+
+            row.style.display = matchesSearch && matchesFilter ? '' : 'none';
+        });
+    }
+});
+
+function confirmDelete(id, name) {
+    const form = document.getElementById('delete-form-' + id);
+    const isActive = form.closest('tr').dataset.status === 'active';
+    const action = isActive ? 'desativar' : 'ativar';
+    
+    if (confirm(`Tem certeza que deseja ${action} a empresa "${name}"?`)) {
+        form.submit();
+    }
+}
+</script>
+{% endblock %} 

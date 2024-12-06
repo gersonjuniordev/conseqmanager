@@ -1,0 +1,501 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="profile-container">
+    <!-- Cabeçalho do Perfil -->
+    <div class="profile-header">
+        <div class="profile-cover"></div>
+        <div class="profile-info-wrapper">
+            <div class="profile-avatar">
+                {% if user.profile_image %}
+                    <img src="{{ url_for('static', filename='uploads/profiles/' + user.profile_image) }}" 
+                         alt="Foto de perfil">
+                {% else %}
+                    <div class="profile-placeholder">
+                        <i class="bi bi-person"></i>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="profile-info">
+                <h1>{{ user.full_name or user.username }}</h1>
+                {% if user.position and user.department %}
+                    <p class="profile-subtitle">{{ user.position }} em {{ user.department }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <div class="profile-content">
+        <!-- Menu de Navegação -->
+        <div class="profile-nav">
+            <button class="nav-item active" data-tab="info">
+                <i class="bi bi-person-vcard"></i>
+                Informações Pessoais
+            </button>
+            <button class="nav-item" data-tab="security">
+                <i class="bi bi-shield-lock"></i>
+                Segurança
+            </button>
+        </div>
+
+        <!-- Seções de Conteúdo -->
+        <div class="profile-sections">
+            <!-- Informações Pessoais -->
+            <div class="profile-section active" id="info">
+                <form method="POST" enctype="multipart/form-data" class="profile-form">
+                    <input type="hidden" name="update_info" value="1">
+                    
+                    <div class="form-group">
+                        <label>
+                            <i class="bi bi-camera"></i>
+                            Foto de Perfil
+                        </label>
+                        <div class="file-input-wrapper">
+                            <input type="file" name="profile_image" accept="image/*" class="file-input">
+                            <button type="button" class="button button-secondary">
+                                <i class="bi bi-upload"></i>
+                                Escolher Foto
+                            </button>
+                            <span class="file-name">Nenhum arquivo selecionado</span>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>
+                                <i class="bi bi-person-badge"></i>
+                                Nome Completo
+                            </label>
+                            <input type="text" name="full_name" value="{{ user.full_name }}" 
+                                   placeholder="Seu nome completo">
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <i class="bi bi-telephone"></i>
+                                Telefone
+                            </label>
+                            <input type="tel" name="phone" value="{{ user.phone }}" 
+                                   placeholder="(00) 00000-0000">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>
+                                <i class="bi bi-briefcase"></i>
+                                Cargo
+                            </label>
+                            <input type="text" name="position" value="{{ user.position }}" 
+                                   placeholder="Seu cargo">
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <i class="bi bi-building"></i>
+                                Departamento
+                            </label>
+                            <input type="text" name="department" value="{{ user.department }}" 
+                                   placeholder="Seu departamento">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <i class="bi bi-file-text"></i>
+                            Sobre
+                        </label>
+                        <textarea name="bio" rows="4" placeholder="Fale um pouco sobre você">{{ user.bio }}</textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="button button-primary">
+                            <i class="bi bi-check-lg"></i>
+                            Salvar Alterações
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Segurança -->
+            <div class="profile-section" id="security">
+                <!-- Email -->
+                <div class="security-card">
+                    <div class="security-card-header">
+                        <i class="bi bi-envelope"></i>
+                        <h3>Email</h3>
+                    </div>
+                    <form method="POST" class="profile-form">
+                        <input type="hidden" name="update_email" value="1">
+                        <div class="form-group">
+                            <label>Novo Email</label>
+                            <input type="email" name="email" value="{{ user.email }}" required>
+                        </div>
+                        <button type="submit" class="button button-primary">
+                            <i class="bi bi-check-lg"></i>
+                            Atualizar Email
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Senha -->
+                <div class="security-card">
+                    <div class="security-card-header">
+                        <i class="bi bi-key"></i>
+                        <h3>Senha</h3>
+                    </div>
+                    <form method="POST" class="profile-form">
+                        <input type="hidden" name="update_password" value="1">
+                        <div class="form-group">
+                            <label>Senha Atual</label>
+                            <div class="password-input">
+                                <input type="password" name="current_password" required>
+                                <button type="button" class="toggle-password">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Nova Senha</label>
+                            <div class="password-input">
+                                <input type="password" name="new_password" required>
+                                <button type="button" class="toggle-password">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">
+                                A senha deve ter pelo menos 8 caracteres, uma letra maiúscula, 
+                                uma minúscula e um número
+                            </small>
+                        </div>
+                        <button type="submit" class="button button-primary">
+                            <i class="bi bi-check-lg"></i>
+                            Alterar Senha
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Última Alteração -->
+                <div class="security-info">
+                    <i class="bi bi-clock-history"></i>
+                    Última alteração de senha: 
+                    {{ user.last_password_change.strftime('%d/%m/%Y às %H:%M') if user.last_password_change else 'Nunca' }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.profile-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.profile-header {
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.profile-cover {
+    height: 200px;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+}
+
+.profile-info-wrapper {
+    position: relative;
+    padding: 0 2rem 2rem;
+    margin-top: -60px;
+}
+
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 4px solid white;
+    box-shadow: var(--shadow);
+    background: white;
+}
+
+.profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+}
+
+.profile-placeholder i {
+    font-size: 3rem;
+    color: #94a3b8;
+}
+
+.profile-info {
+    margin-top: 1rem;
+}
+
+.profile-info h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    color: var(--dark-color);
+}
+
+.profile-subtitle {
+    color: var(--text-light);
+    margin: 0.5rem 0 0;
+}
+
+.profile-nav {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+}
+
+.nav-item {
+    background: none;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--text-light);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.nav-item i {
+    font-size: 1.2rem;
+}
+
+.nav-item.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+.profile-section {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.profile-section.active {
+    display: block;
+}
+
+.profile-form {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+.form-group label i {
+    color: var(--primary-color);
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.file-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.file-input {
+    display: none;
+}
+
+.file-name {
+    color: var(--text-light);
+    font-size: 0.9rem;
+}
+
+.security-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+}
+
+.security-card-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.security-card-header i {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+}
+
+.security-card-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.password-input {
+    position: relative;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    padding: 0;
+}
+
+.security-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-light);
+    font-size: 0.9rem;
+    margin-top: 1rem;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .profile-nav {
+        flex-direction: column;
+    }
+    
+    .profile-info-wrapper {
+        padding: 0 1rem 1rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Navegação entre abas
+    const navButtons = document.querySelectorAll('.nav-item');
+    const sections = document.querySelectorAll('.profile-section');
+    
+    navButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const tab = button.dataset.tab;
+            
+            // Atualizar botões
+            navButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            
+            // Atualizar seções
+            sections.forEach(section => {
+                section.classList.remove('active');
+                if (section.id === tab) {
+                    section.classList.add('active');
+                }
+            });
+        });
+    });
+    
+    // Upload de foto
+    const fileInput = document.querySelector('.file-input');
+    const fileName = document.querySelector('.file-name');
+    const fileButton = document.querySelector('.file-input-wrapper .button');
+    
+    fileButton.addEventListener('click', () => fileInput.click());
+    
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+            fileName.textContent = fileInput.files[0].name;
+        } else {
+            fileName.textContent = 'Nenhum arquivo selecionado';
+        }
+    });
+    
+    // Toggle de senha
+    const toggleButtons = document.querySelectorAll('.toggle-password');
+    
+    toggleButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const input = button.parentElement.querySelector('input');
+            const icon = button.querySelector('i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
