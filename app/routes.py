@@ -9,6 +9,8 @@ from functools import wraps
 from app.signature_manager import SignatureManager
 import json
 from app.signature_validator import SignatureValidator
+import time
+import shutil
 
 main = Blueprint('main', __name__)
 
@@ -226,30 +228,18 @@ def sign_document(doc_id):
 def download_document(doc_id):
     try:
         document = Document.query.get_or_404(doc_id)
-        current_app.logger.info(f"Baixando documento {doc_id}")
         
         # Verificar permissão
-        if session['user_type'] != 'admin' and document.company_id != session.get('company_id'):
-            current_app.logger.error("Acesso não autorizado")
-            abort(403)  # Forbidden
+        if session['user_type'] == 'company' and document.company_id != session['company_id']:
+            abort(403)
         
-        # Determinar caminho do arquivo
+        # Determinar o caminho do arquivo
         if document.company_id:
-            base_folder = os.path.join(current_app.config['COMPANY_UPLOADS'], 
-                                     str(document.company_id))
+            base_path = os.path.join(current_app.config['COMPANY_UPLOADS'], str(document.company_id))
         else:
-            base_folder = current_app.config['ADMIN_UPLOADS']
+            base_path = current_app.config['ADMIN_UPLOADS']
             
-        current_app.logger.info(f"Base folder: {base_folder}")
-        
-        # Se o documento estiver assinado, retorna a versão assinada
-        if document.status == 'signed':
-            filename = document.filename.replace('.pdf', '_signed.pdf')
-        else:
-            filename = document.filename
-            
-        file_path = os.path.join(base_folder, filename)
-        current_app.logger.info(f"File path: {file_path}")
+        file_path = os.path.join(base_path, document.filename)
         
         if not os.path.exists(file_path):
             current_app.logger.error(f"Arquivo não encontrado: {file_path}")
@@ -267,28 +257,22 @@ def download_document(doc_id):
         abort(500)
 
 @main.route('/view/<doc_id>')
+@login_required
 def view_document(doc_id):
     try:
         document = Document.query.get_or_404(doc_id)
-        current_app.logger.info(f"Visualizando documento {doc_id}")
         
-        # Determinar caminho do arquivo
+        # Verificar permissão
+        if session['user_type'] == 'company' and document.company_id != session['company_id']:
+            abort(403)
+        
+        # Determinar o caminho do arquivo
         if document.company_id:
-            base_folder = os.path.join(current_app.config['COMPANY_UPLOADS'], 
-                                     str(document.company_id))
+            base_path = os.path.join(current_app.config['COMPANY_UPLOADS'], str(document.company_id))
         else:
-            base_folder = current_app.config['ADMIN_UPLOADS']
+            base_path = current_app.config['ADMIN_UPLOADS']
             
-        current_app.logger.info(f"Base folder: {base_folder}")
-        
-        # Se o documento estiver assinado, retorna a versão assinada
-        if document.status == 'signed':
-            filename = document.filename.replace('.pdf', '_signed.pdf')
-        else:
-            filename = document.filename
-            
-        file_path = os.path.join(base_folder, filename)
-        current_app.logger.info(f"File path: {file_path}")
+        file_path = os.path.join(base_path, document.filename)
         
         if not os.path.exists(file_path):
             current_app.logger.error(f"Arquivo não encontrado: {file_path}")
@@ -368,14 +352,17 @@ def sign_document_post(doc_id):
         # Obter caminho do arquivo baseado na empresa
         if document.company_id:
             base_path = os.path.join(current_app.config['COMPANY_UPLOADS'], str(document.company_id))
-            file_path = os.path.join(base_path, document.filename)
         else:
             base_path = current_app.config['ADMIN_UPLOADS']
-            file_path = os.path.join(base_path, document.filename)
+            
+        file_path = os.path.join(base_path, document.filename)
         
         # Verificar se o arquivo existe
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Arquivo não encontrado: {file_path}")
+        
+        # Garantir que o diretório existe
+        os.makedirs(base_path, exist_ok=True)
         
         # Processar assinatura
         with open(file_path, 'rb') as f:
@@ -400,12 +387,12 @@ def sign_document_post(doc_id):
         )
         
         # Atualizar nome do arquivo para a versão assinada
-        new_filename = document.filename.replace('.pdf', '_signed.pdf')
+        new_filename = f"signed_{int(time.time())}_{document.filename}"
         new_file_path = os.path.join(base_path, new_filename)
         
         # Mover arquivo assinado para o local correto
         if os.path.exists(output_path):
-            os.rename(output_path, new_file_path)
+            shutil.move(output_path, new_file_path)
             document.filename = new_filename
         
         # Atualizar documento
@@ -416,6 +403,8 @@ def sign_document_post(doc_id):
         try:
             db.session.commit()
         except Exception as e:
+            if os.path.exists(new_file_path):
+                os.remove(new_file_path)
             db.session.rollback()
             raise e
         
@@ -423,7 +412,7 @@ def sign_document_post(doc_id):
         
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao assinar documento: {str(e)}")
+        current_app.logger.error(f"Erro ao assinar documento: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @main.route('/profile', methods=['GET', 'POST'])
