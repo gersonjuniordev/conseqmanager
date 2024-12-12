@@ -173,20 +173,41 @@ document.addEventListener('DOMContentLoaded', function() {
         let currentY;
         let initialX;
         let initialY;
+        let scale = 1;
+        let currentScale = 1;
+        let initialDistance = 0;
 
-        signaturePreview.addEventListener('touchstart', dragStart, { passive: false });
-        document.addEventListener('touchmove', drag, { passive: false });
-        document.addEventListener('touchend', dragEnd);
+        signaturePreview.addEventListener('touchstart', handleTouchStart, { passive: false });
+        document.addEventListener('touchmove', handleTouchMove, { passive: false });
+        document.addEventListener('touchend', handleTouchEnd);
 
-        function dragStart(e) {
-            initialX = e.touches[0].clientX - signaturePreview.offsetLeft;
-            initialY = e.touches[0].clientY - signaturePreview.offsetTop;
-            isDragging = true;
+        function handleTouchStart(e) {
+            e.preventDefault();
+            
+            if (e.touches.length === 1) {
+                // Modo de arrasto
+                isDragging = true;
+                initialX = e.touches[0].clientX - signaturePreview.offsetLeft;
+                initialY = e.touches[0].clientY - signaturePreview.offsetTop;
+            } 
+            else if (e.touches.length === 2) {
+                // Modo de redimensionamento
+                isDragging = false;
+                initialDistance = getDistance(
+                    e.touches[0].clientX,
+                    e.touches[0].clientY,
+                    e.touches[1].clientX,
+                    e.touches[1].clientY
+                );
+                currentScale = scale;
+            }
         }
 
-        function drag(e) {
-            if (isDragging) {
-                e.preventDefault();
+        function handleTouchMove(e) {
+            e.preventDefault();
+            
+            if (isDragging && e.touches.length === 1) {
+                // Lógica de arrasto
                 currentX = e.touches[0].clientX - initialX;
                 currentY = e.touches[0].clientY - initialY;
 
@@ -199,14 +220,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 signaturePreview.style.left = currentX + 'px';
                 signaturePreview.style.top = currentY + 'px';
 
-                // Calcular posição em porcentagem
                 signaturePosition.x = (currentX / rect.width) * 100;
                 signaturePosition.y = (currentY / rect.height) * 100;
+            } 
+            else if (e.touches.length === 2) {
+                // Lógica de redimensionamento
+                const currentDistance = getDistance(
+                    e.touches[0].clientX,
+                    e.touches[0].clientY,
+                    e.touches[1].clientX,
+                    e.touches[1].clientY
+                );
+                
+                scale = currentScale * (currentDistance / initialDistance);
+                
+                // Limitar escala entre 0.5 e 2
+                scale = Math.min(Math.max(0.5, scale), 2);
+                
+                signaturePreview.style.transform = `scale(${scale})`;
+                signaturePreview.dataset.scale = scale;
             }
         }
 
-        function dragEnd() {
+        function handleTouchEnd() {
             isDragging = false;
+        }
+
+        function getDistance(x1, y1, x2, y2) {
+            return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
         }
     }
 
@@ -224,7 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('save').addEventListener('click', async function() {
         try {
             if (signaturePad.isEmpty()) {
-                alert('Por favor, faça sua assinatura');
+                alert('Por favor, faça sua assinatura primeiro');
                 return;
             }
 
@@ -245,6 +286,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 signature: signaturePad.toDataURL(),
                 position_x: signaturePosition.x,
                 position_y: signaturePosition.y,
+                scale: parseFloat(signaturePreview.dataset.scale || 1),
                 name: formData.get('name'),
                 email: formData.get('email'),
                 cpf: formData.get('cpf')

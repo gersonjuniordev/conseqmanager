@@ -19,7 +19,7 @@ def generate_qr_code(data):
     img.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode()
 
-def save_signature_on_pdf(pdf_path, signature_data, x, y):
+def save_signature_on_pdf(pdf_path, signature_data, x, y, scale=1.0):
     try:
         # Processar assinatura
         signature_image_data = signature_data.split(',')[1]
@@ -60,6 +60,14 @@ def save_signature_on_pdf(pdf_path, signature_data, x, y):
                 # Calcular posição real da assinatura
                 sig_x = (float(x) / 100.0) * page_width
                 sig_y = page_height - ((float(y) / 100.0) * page_height) - signature_image.height
+                
+                # Redimensionar a imagem da assinatura
+                original_width = signature_image.width
+                new_width = int(original_width * scale)
+                signature_image = signature_image.resize(
+                    (new_width, int(signature_image.height * scale)), 
+                    Image.LANCZOS
+                )
                 
                 # Criar camada de assinatura
                 packet = io.BytesIO()
