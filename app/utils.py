@@ -51,17 +51,13 @@ def save_signature_on_pdf(pdf_path, signature_data, x, y, scale=1.0):
         for i in range(len(reader.pages)):
             page = reader.pages[i]
             
-            # Adicionar assinatura apenas na última página
-            if i == len(reader.pages) - 1:
+            # Adicionar assinatura apenas na página atual
+            if i == len(reader.pages) - 1:  # Alterado para última página
                 # Obter dimensões da página
                 page_width = float(page.mediabox.width)
                 page_height = float(page.mediabox.height)
                 
-                # Calcular posição real da assinatura
-                sig_x = (float(x) / 100.0) * page_width
-                sig_y = page_height - ((float(y) / 100.0) * page_height) - signature_image.height
-                
-                # Redimensionar a imagem da assinatura
+                # Redimensionar a imagem da assinatura primeiro
                 original_width = signature_image.width
                 new_width = int(original_width * scale)
                 signature_image = signature_image.resize(
@@ -69,10 +65,16 @@ def save_signature_on_pdf(pdf_path, signature_data, x, y, scale=1.0):
                     Image.LANCZOS
                 )
                 
+                # Calcular posição real da assinatura
+                # Ajustado para usar a altura da imagem redimensionada
+                sig_x = (float(x) / 100.0) * page_width
+                sig_y = page_height - ((float(y) / 100.0) * page_height) - (signature_image.height * scale)
+                
                 # Criar camada de assinatura
                 packet = io.BytesIO()
                 can = canvas.Canvas(packet, pagesize=(page_width, page_height))
-                can.drawImage(temp_sig_path, sig_x, sig_y, mask='auto')
+                can.drawImage(temp_sig_path, sig_x, sig_y, width=new_width, 
+                            height=int(signature_image.height * scale), mask='auto')
                 can.save()
                 packet.seek(0)
                 

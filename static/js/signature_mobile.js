@@ -176,6 +176,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let scale = 1;
         let currentScale = 1;
         let initialDistance = 0;
+        let transformOrigin = { x: '50%', y: '50%' };
 
         signaturePreview.addEventListener('touchstart', handleTouchStart, { passive: false });
         document.addEventListener('touchmove', handleTouchMove, { passive: false });
@@ -200,6 +201,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     e.touches[1].clientY
                 );
                 currentScale = scale;
+                
+                // Calcular o ponto central entre os dois dedos
+                const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                
+                // Converter para posição relativa ao elemento
+                const rect = signaturePreview.getBoundingClientRect();
+                transformOrigin.x = ((centerX - rect.left) / rect.width) * 100 + '%';
+                transformOrigin.y = ((centerY - rect.top) / rect.height) * 100 + '%';
+                
+                signaturePreview.style.transformOrigin = `${transformOrigin.x} ${transformOrigin.y}`;
             }
         }
 
@@ -214,8 +226,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 const container = document.querySelector('.pdf-container-modal');
                 const rect = container.getBoundingClientRect();
                 
-                currentX = Math.min(Math.max(0, currentX), rect.width - signaturePreview.offsetWidth);
-                currentY = Math.min(Math.max(0, currentY), rect.height - signaturePreview.offsetHeight);
+                // Ajustar limites considerando a escala
+                const scaledWidth = signaturePreview.offsetWidth * scale;
+                const scaledHeight = signaturePreview.offsetHeight * scale;
+                
+                currentX = Math.min(Math.max(0, currentX), rect.width - scaledWidth);
+                currentY = Math.min(Math.max(0, currentY), rect.height - scaledHeight);
 
                 signaturePreview.style.left = currentX + 'px';
                 signaturePreview.style.top = currentY + 'px';
@@ -233,8 +249,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 );
                 
                 scale = currentScale * (currentDistance / initialDistance);
-                
-                // Limitar escala entre 0.5 e 2
                 scale = Math.min(Math.max(0.5, scale), 2);
                 
                 signaturePreview.style.transform = `scale(${scale})`;

@@ -24,6 +24,9 @@
     z-index: 1000;
     background: transparent;
     touch-action: none;
+    transform-origin: center center;
+    will-change: transform;
+    transition: transform 0.05s ease-out;
 }
 
 #signature-preview img {
@@ -31,6 +34,7 @@
     height: auto;
     pointer-events: none;
     user-select: none;
+    -webkit-user-drag: none;
 }
 
 .signature-pad-container {
