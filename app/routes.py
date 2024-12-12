@@ -367,20 +367,22 @@ def sign_document_post(doc_id):
         
         # Obter caminho do arquivo baseado na empresa
         if document.company_id:
-            file_path = os.path.join(current_app.config['COMPANY_UPLOADS'], 
-                                   str(document.company_id), 
-                                   document.filename)
+            base_path = os.path.join(current_app.config['COMPANY_UPLOADS'], str(document.company_id))
+            file_path = os.path.join(base_path, document.filename)
         else:
-            file_path = os.path.join(current_app.config['ADMIN_UPLOADS'], 
-                                   document.filename)
+            base_path = current_app.config['ADMIN_UPLOADS']
+            file_path = os.path.join(base_path, document.filename)
         
         # Verificar se o arquivo existe
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Arquivo não encontrado: {file_path}")
         
         # Processar assinatura
+        with open(file_path, 'rb') as f:
+            pdf_content = f.read()
+            
         signature_data = signature_manager.sign_document(
-            open(file_path, 'rb').read(),
+            pdf_content,
             {
                 'name': document.signer_name,
                 'email': data.get('email')
@@ -397,19 +399,32 @@ def sign_document_post(doc_id):
             data.get('page', 1)
         )
         
+        # Atualizar nome do arquivo para a versão assinada
+        new_filename = document.filename.replace('.pdf', '_signed.pdf')
+        new_file_path = os.path.join(base_path, new_filename)
+        
+        # Mover arquivo assinado para o local correto
+        if os.path.exists(output_path):
+            os.rename(output_path, new_file_path)
+            document.filename = new_filename
+        
         # Atualizar documento
         document.status = 'signed'
         document.signature_hash = signature_data['hash']
         document.signature_certificate = signature_data['certificate']
         
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
         
         return jsonify({'success': True})
         
     except Exception as e:
-        print(f"Erro na assinatura: {str(e)}")
         db.session.rollback()
-        return jsonify({'error': 'Erro ao processar assinatura'}), 500
+        print(f"Erro ao assinar documento: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @main.route('/profile', methods=['GET', 'POST'])
 @login_required

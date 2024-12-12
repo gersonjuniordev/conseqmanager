@@ -37,8 +37,12 @@ def save_signature_on_pdf(pdf_path, signature_data, x, y, scale=1.0, page=1):
                 new_data.append(item)
         signature_image.putdata(new_data)
         
+        # Criar diretório temporário se não existir
+        temp_dir = os.path.join(os.path.dirname(pdf_path), 'temp')
+        os.makedirs(temp_dir, exist_ok=True)
+        
         # Salvar assinatura temporária
-        temp_sig_path = os.path.join(os.path.dirname(pdf_path), f'temp_sig_{int(time.time())}.png')
+        temp_sig_path = os.path.join(temp_dir, f'temp_sig_{int(time.time())}.png')
         signature_image.save(temp_sig_path, 'PNG')
         
         # Processar PDF
@@ -52,8 +56,7 @@ def save_signature_on_pdf(pdf_path, signature_data, x, y, scale=1.0, page=1):
             page_obj = reader.pages[i]
             
             # Adicionar assinatura na página selecionada
-            if i == (page - 1):  # Ajustar para índice base-0
-                # Obter dimensões da página
+            if i == (page - 1):
                 page_width = float(page_obj.mediabox.width)
                 page_height = float(page_obj.mediabox.height)
                 
@@ -87,8 +90,10 @@ def save_signature_on_pdf(pdf_path, signature_data, x, y, scale=1.0, page=1):
         with open(output_path, 'wb') as output_file:
             writer.write(output_file)
         
-        # Limpar arquivo temporário
+        # Limpar arquivos temporários
         os.remove(temp_sig_path)
+        if os.path.exists(temp_dir) and not os.listdir(temp_dir):
+            os.rmdir(temp_dir)
         
         return output_path
         
