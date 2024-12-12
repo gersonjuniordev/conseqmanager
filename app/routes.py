@@ -393,7 +393,8 @@ def sign_document_post(doc_id):
             data.get('signature'),
             data.get('position_x', 0),
             data.get('position_y', 0),
-            data.get('scale', 1.0)
+            data.get('scale', 1.0),
+            data.get('page', 1)
         )
         
         # Atualizar documento

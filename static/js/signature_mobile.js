@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const pdfViewer = document.getElementById('pdf-viewer');
     let currentPage = 1;
     let pdfDoc = null;
+    let signaturePage = 1; // Nova variável para controlar a página da assinatura
 
     let signaturePosition = { x: 10, y: 90 }; // Posição padrão
     const modal = document.getElementById('positionModal');
@@ -16,35 +17,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Carregar PDF
     async function loadPDF() {
-        const pdfUrl = `/view/${documentId}`;
-        
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        
         try {
-            // Primeiro, tentar buscar o PDF
+            const pdfUrl = `/view/${documentId}`;
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            
             const response = await fetch(pdfUrl);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            // Converter resposta para ArrayBuffer
             const pdfData = await response.arrayBuffer();
+            pdfDoc = await pdfjsLib.getDocument({data: pdfData}).promise;
             
-            // Carregar PDF com pdf.js
-            const loadingTask = pdfjsLib.getDocument({data: pdfData});
-            pdfDoc = await loadingTask.promise;
-            
-            // Adicionar controles de navegação se houver mais de uma página
+            // Adicionar controles de navegação
             if (pdfDoc.numPages > 1) {
                 addPageControls();
             }
             
-            // Renderizar primeira página
             await renderPage(1);
-            
         } catch (error) {
             console.error('Erro ao carregar PDF:', error);
-            alert('Erro ao carregar o documento. Por favor, tente novamente.');
         }
     }
 
@@ -52,65 +40,52 @@ document.addEventListener('DOMContentLoaded', function() {
     async function renderPage(pageNumber) {
         try {
             const page = await pdfDoc.getPage(pageNumber);
-            const viewport = page.getViewport({ scale: 1.0 });
+            const viewport = page.getViewport({ scale: 1.5 });
             
-            // Ajustar escala para caber na tela
-            const containerWidth = pdfContainer.clientWidth;
-            const scale = containerWidth / viewport.width;
-            const scaledViewport = page.getViewport({ scale });
-
-            // Configurar canvas
-            pdfViewer.width = scaledViewport.width;
-            pdfViewer.height = scaledViewport.height;
+            const canvas = document.getElementById('pdf-viewer');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
             
-            const renderContext = {
-                canvasContext: pdfViewer.getContext('2d'),
-                viewport: scaledViewport,
-                enableWebGL: true
-            };
-
-            await page.render(renderContext).promise;
+            await page.render({
+                canvasContext: canvas.getContext('2d'),
+                viewport: viewport
+            }).promise;
+            
             currentPage = pageNumber;
+            signaturePage = pageNumber; // Atualizar página da assinatura
             
-            // Atualizar contador de páginas
             if (document.getElementById('pageInfo')) {
                 document.getElementById('pageInfo').textContent = 
                     `Página ${currentPage} de ${pdfDoc.numPages}`;
             }
         } catch (error) {
             console.error('Erro ao renderizar página:', error);
-            alert('Erro ao exibir a página do documento.');
         }
     }
 
     // Adicionar controles de navegação
     function addPageControls() {
         const controls = document.createElement('div');
-        controls.className = 'pdf-controls';
+        controls.className = 'page-controls';
         controls.innerHTML = `
-            <button id="prevPage" class="button button-secondary">
-                <i class="bi bi-chevron-left"></i>
-            </button>
-            <span id="pageInfo">Página 1 de ${pdfDoc.numPages}</span>
-            <button id="nextPage" class="button button-secondary">
-                <i class="bi bi-chevron-right"></i>
-            </button>
+            <button id="prevPage" class="button button-secondary">Anterior</button>
+            <span id="pageInfo">Página ${currentPage} de ${pdfDoc.numPages}</span>
+            <button id="nextPage" class="button button-secondary">Próxima</button>
         `;
         
-        pdfContainer.insertBefore(controls, pdfViewer);
+        document.querySelector('.pdf-container-modal').appendChild(controls);
         
-        // Eventos dos botões
-        document.getElementById('prevPage').addEventListener('click', () => {
+        document.getElementById('prevPage').onclick = () => {
             if (currentPage > 1) {
                 renderPage(currentPage - 1);
             }
-        });
+        };
         
-        document.getElementById('nextPage').addEventListener('click', () => {
+        document.getElementById('nextPage').onclick = () => {
             if (currentPage < pdfDoc.numPages) {
                 renderPage(currentPage + 1);
             }
-        });
+        };
     }
 
     // Limpar assinatura
@@ -219,25 +194,21 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             
             if (isDragging && e.touches.length === 1) {
-                // Lógica de arrasto
                 currentX = e.touches[0].clientX - initialX;
                 currentY = e.touches[0].clientY - initialY;
 
                 const container = document.querySelector('.pdf-container-modal');
                 const rect = container.getBoundingClientRect();
                 
-                // Ajustar limites considerando a escala
-                const scaledWidth = signaturePreview.offsetWidth * scale;
-                const scaledHeight = signaturePreview.offsetHeight * scale;
-                
-                currentX = Math.min(Math.max(0, currentX), rect.width - scaledWidth);
-                currentY = Math.min(Math.max(0, currentY), rect.height - scaledHeight);
+                currentX = Math.min(Math.max(0, currentX), rect.width - signaturePreview.offsetWidth);
+                currentY = Math.min(Math.max(0, currentY), rect.height - signaturePreview.offsetHeight);
 
                 signaturePreview.style.left = currentX + 'px';
                 signaturePreview.style.top = currentY + 'px';
 
                 signaturePosition.x = (currentX / rect.width) * 100;
                 signaturePosition.y = (currentY / rect.height) * 100;
+                signaturePosition.page = currentPage;
             } 
             else if (e.touches.length === 2) {
                 // Lógica de redimensionamento
@@ -301,6 +272,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 position_x: signaturePosition.x,
                 position_y: signaturePosition.y,
                 scale: parseFloat(signaturePreview.dataset.scale || 1),
+                page: signaturePosition.page,
                 name: formData.get('name'),
                 email: formData.get('email'),
                 cpf: formData.get('cpf')

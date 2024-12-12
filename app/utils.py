@@ -19,7 +19,7 @@ def generate_qr_code(data):
     img.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode()
 
-def save_signature_on_pdf(pdf_path, signature_data, x, y, scale=1.0):
+def save_signature_on_pdf(pdf_path, signature_data, x, y, scale=1.0, page=1):
     try:
         # Processar assinatura
         signature_image_data = signature_data.split(',')[1]
@@ -49,15 +49,15 @@ def save_signature_on_pdf(pdf_path, signature_data, x, y, scale=1.0):
         
         # Copiar todas as páginas
         for i in range(len(reader.pages)):
-            page = reader.pages[i]
+            page_obj = reader.pages[i]
             
-            # Adicionar assinatura apenas na página atual
-            if i == len(reader.pages) - 1:  # Alterado para última página
+            # Adicionar assinatura na página selecionada
+            if i == (page - 1):  # Ajustar para índice base-0
                 # Obter dimensões da página
-                page_width = float(page.mediabox.width)
-                page_height = float(page.mediabox.height)
+                page_width = float(page_obj.mediabox.width)
+                page_height = float(page_obj.mediabox.height)
                 
-                # Redimensionar a imagem da assinatura primeiro
+                # Redimensionar a imagem da assinatura
                 original_width = signature_image.width
                 new_width = int(original_width * scale)
                 signature_image = signature_image.resize(
@@ -66,7 +66,6 @@ def save_signature_on_pdf(pdf_path, signature_data, x, y, scale=1.0):
                 )
                 
                 # Calcular posição real da assinatura
-                # Ajustado para usar a altura da imagem redimensionada
                 sig_x = (float(x) / 100.0) * page_width
                 sig_y = page_height - ((float(y) / 100.0) * page_height) - (signature_image.height * scale)
                 
@@ -80,9 +79,9 @@ def save_signature_on_pdf(pdf_path, signature_data, x, y, scale=1.0):
                 
                 # Mesclar assinatura com a página
                 sig_pdf = PdfReader(packet)
-                page.merge_page(sig_pdf.pages[0])
+                page_obj.merge_page(sig_pdf.pages[0])
             
-            writer.add_page(page)
+            writer.add_page(page_obj)
         
         # Salvar PDF final
         with open(output_path, 'wb') as output_file:
