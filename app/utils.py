@@ -19,7 +19,7 @@ def generate_qr_code(data):
     img.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode()
 
-def save_signature_on_pdf(pdf_path, signature_data, x, y, scale=1.0, page=1):
+def save_signature_on_pdf(pdf_path, signature_data, x, y):
     try:
         # Processar assinatura
         signature_image_data = signature_data.split(',')[1]
@@ -37,12 +37,8 @@ def save_signature_on_pdf(pdf_path, signature_data, x, y, scale=1.0, page=1):
                 new_data.append(item)
         signature_image.putdata(new_data)
         
-        # Criar diretório temporário se não existir
-        temp_dir = os.path.join(os.path.dirname(pdf_path), 'temp')
-        os.makedirs(temp_dir, exist_ok=True)
-        
         # Salvar assinatura temporária
-        temp_sig_path = os.path.join(temp_dir, f'temp_sig_{int(time.time())}.png')
+        temp_sig_path = os.path.join(os.path.dirname(pdf_path), f'temp_sig_{int(time.time())}.png')
         signature_image.save(temp_sig_path, 'PNG')
         
         # Processar PDF
@@ -53,47 +49,37 @@ def save_signature_on_pdf(pdf_path, signature_data, x, y, scale=1.0, page=1):
         
         # Copiar todas as páginas
         for i in range(len(reader.pages)):
-            page_obj = reader.pages[i]
+            page = reader.pages[i]
             
-            # Adicionar assinatura na página selecionada
-            if i == (page - 1):
-                page_width = float(page_obj.mediabox.width)
-                page_height = float(page_obj.mediabox.height)
-                
-                # Redimensionar a imagem da assinatura
-                original_width = signature_image.width
-                new_width = int(original_width * scale)
-                signature_image = signature_image.resize(
-                    (new_width, int(signature_image.height * scale)), 
-                    Image.LANCZOS
-                )
+            # Adicionar assinatura apenas na última página
+            if i == len(reader.pages) - 1:
+                # Obter dimensões da página
+                page_width = float(page.mediabox.width)
+                page_height = float(page.mediabox.height)
                 
                 # Calcular posição real da assinatura
                 sig_x = (float(x) / 100.0) * page_width
-                sig_y = page_height - ((float(y) / 100.0) * page_height) - (signature_image.height * scale)
+                sig_y = page_height - ((float(y) / 100.0) * page_height) - signature_image.height
                 
                 # Criar camada de assinatura
                 packet = io.BytesIO()
                 can = canvas.Canvas(packet, pagesize=(page_width, page_height))
-                can.drawImage(temp_sig_path, sig_x, sig_y, width=new_width, 
-                            height=int(signature_image.height * scale), mask='auto')
+                can.drawImage(temp_sig_path, sig_x, sig_y, mask='auto')
                 can.save()
                 packet.seek(0)
                 
                 # Mesclar assinatura com a página
                 sig_pdf = PdfReader(packet)
-                page_obj.merge_page(sig_pdf.pages[0])
+                page.merge_page(sig_pdf.pages[0])
             
-            writer.add_page(page_obj)
+            writer.add_page(page)
         
         # Salvar PDF final
         with open(output_path, 'wb') as output_file:
             writer.write(output_file)
         
-        # Limpar arquivos temporários
+        # Limpar arquivo temporário
         os.remove(temp_sig_path)
-        if os.path.exists(temp_dir) and not os.listdir(temp_dir):
-            os.rmdir(temp_dir)
         
         return output_path
         
