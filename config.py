@@ -3,7 +3,7 @@ from datetime import timedelta
 
 class Config:
     # Configurações base
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'chave-muito-secreta'
+    SECRET_KEY = os.environ.get('SECRET_KEY')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max-limit
     
