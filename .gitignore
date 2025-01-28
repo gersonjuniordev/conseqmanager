@@ -49,4 +49,8 @@ logs/
 *.sqlite3
 
 # Outros
-.DS_Store 
+.DS_Store
+
+# Docker
+.docker/
+docker-compose.override.yml 
